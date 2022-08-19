@@ -4,7 +4,6 @@ import java.util.List;
 
 import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -17,8 +16,11 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 
+import com.project.snackfood.domain.exception.EntidadeEmUsoException;
+import com.project.snackfood.domain.exception.EntidadeNaoEncotradaException;
 import com.project.snackfood.domain.model.Cozinha;
 import com.project.snackfood.domain.repository.CozinhaRepository;
+import com.project.snackfood.domain.service.CadastroCozinhaService;
 
 //@Controller // controlador de requisições web
 ///@ResponseBody // o corpo deve ser enviado na resposta
@@ -28,6 +30,14 @@ public class CozinhaController {
 
 	@Autowired
 	private CozinhaRepository cozinhaRepository;
+	
+	@Autowired
+	private CadastroCozinhaService cadastroCozinha;
+	
+//	@Autowired
+//	public CozinhaController(CozinhaRepository cozinhaRepository) { // é o que ta fazendo na linha acima
+//		this.cozinhaRepository = cozinhaRepository;					// a instancia é gerencionda pelo spring
+//	} // polimofismo
 
 	@GetMapping
 	public List<Cozinha> listar() {
@@ -47,7 +57,7 @@ public class CozinhaController {
 	@PostMapping
 	@ResponseStatus(HttpStatus.CREATED)
 	public Cozinha adicionar(@RequestBody Cozinha cozinha) {
-		return cozinhaRepository.salvar(cozinha);
+		return cadastroCozinha.salvar(cozinha);
 	}
 
 	@PutMapping("/{cozinhaId}")
@@ -58,7 +68,7 @@ public class CozinhaController {
 			// cozinhaAtual.setNome(cozinha.getNome());
 			BeanUtils.copyProperties(cozinha, cozinhaAtual, "id"); // copia as propiedades mais ignora o id
 
-			cozinhaRepository.salvar(cozinhaAtual);
+			cozinhaAtual = cadastroCozinha.salvar(cozinhaAtual);
 
 			return ResponseEntity.ok(cozinhaAtual);
 		}
@@ -71,16 +81,13 @@ public class CozinhaController {
 	public ResponseEntity<Cozinha> remover(@PathVariable Long cozinhaId){
 		
 		try {
-			Cozinha cozinha = cozinhaRepository.buscar(cozinhaId);
-			if(cozinha != null) {
-				cozinhaRepository.remover(cozinha);
-				
-				return ResponseEntity.noContent().build();
-			}
-			
+			cadastroCozinha.excluir(cozinhaId);		
+			return ResponseEntity.noContent().build();
+		
+		}catch (EntidadeNaoEncotradaException e) {
 			return ResponseEntity.notFound().build();
-
-		} catch (DataIntegrityViolationException e) {
+		
+		} catch (EntidadeEmUsoException e) {
 			return ResponseEntity.status(HttpStatus.CONFLICT).build();
 		}
 				
